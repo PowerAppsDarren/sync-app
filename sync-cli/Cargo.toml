@@ -1,0 +1,20 @@
+[package]
+name = "sync-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command line interface for sync application"
+
+[[bin]]
+name = "sync"
+path = "src/main.rs"
+
+[dependencies]
+sync-core = { path = "../sync-core" }
+clap.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
