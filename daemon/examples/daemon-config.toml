@@ -1,0 +1,101 @@
+# Sync Daemon Configuration with Telemetry
+# This example shows how to configure the sync daemon with comprehensive
+# logging, telemetry, and Prometheus metrics
+
+[pocketbase]
+url = "http://localhost:8090"
+admin_email = "admin@example.com"
+admin_password = "admin123456"
+timeout_secs = 30
+retry_attempts = 3
+retry_delay_secs = 5
+
+[daemon]
+pid_file = "/var/run/sync-daemon.pid"
+log_file = "/var/log/sync-daemon.log"
+log_level = "info"
+config_refresh_interval_secs = 300
+auto_restart_on_config_change = false
+
+# Telemetry Configuration
+[telemetry]
+log_level = "info"
+json_logging = true
+console_logging = true
+log_file_path = "logs/daemon.log"
+
+# Log rotation settings
+[telemetry.log_rotation]
+enabled = true
+frequency = "daily"
+keep_files = 7
+max_size_mb = 100
+
+# PocketBase logging settings
+[telemetry.pocketbase_logging]
+enabled = true
+collection = "daemon_logs"
+batch_size = 100
+flush_interval_secs = 30
+max_retries = 3
+
+# Metrics settings
+[telemetry.metrics]
+enabled = true
+bind_address = "127.0.0.1"
+port = 9090
+collection_interval_secs = 15
+
+[[sync_jobs]]
+id = "documents_sync"
+name = "Documents Synchronization"
+source_path = "~/Documents"
+destination_path = "/backup/documents"
+enabled = true
+filters = ["*.tmp", "*.log", ".DS_Store"]
+
+[sync_jobs.schedule]
+type = "interval"
+interval = "5m"
+
+[sync_jobs.sync_options]
+dry_run = false
+preserve_permissions = true
+preserve_timestamps = true
+delete_destination_files = false
+comparison_method = "sha256"
+ignore_hidden_files = true
+continue_on_error = true
+
+[[sync_jobs]]
+id = "pictures_sync"
+name = "Pictures Backup"
+source_path = "~/Pictures"
+destination_path = "/backup/pictures"
+enabled = true
+filters = ["*.DS_Store", "Thumbs.db"]
+
+[sync_jobs.schedule]
+type = "cron"
+expression = "0 2 * * *"  # Daily at 2 AM
+
+[[file_watchers]]
+id = "documents_watcher"
+name = "Documents File Watcher"
+watch_path = "~/Documents"
+sync_job_id = "documents_sync"
+enabled = true
+recursive = true
+debounce_ms = 1000
+watch_events = ["create", "write", "remove"]
+
+[concurrency]
+max_concurrent_syncs = 4
+max_file_operations = 100
+sync_queue_size = 1000
+
+[cache]
+cache_dir = "~/.cache/sync-daemon"
+config_cache_ttl_secs = 300
+file_metadata_cache_ttl_secs = 60
+enable_persistent_cache = true

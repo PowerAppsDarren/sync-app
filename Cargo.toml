@@ -3,6 +3,9 @@ members = [
     "sync-core",
     "sync-cli",
     "sync-server",
+    "sync",
+    "ui",
+    "daemon",
 ]
 
 resolver = "2"
@@ -23,4 +26,19 @@ anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 reqwest = { version = "0.11", features = ["json"] }
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+tracing-appender = "0.2"
+prometheus = "0.13"
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+serde_yaml = "0.9"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+url = "2.5"
+futures-util = "0.3"
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+base64 = "0.22"
+thiserror = "1.0"
+backoff = { version = "0.4", features = ["futures", "tokio"] }
+serde_urlencoded = "0.7"

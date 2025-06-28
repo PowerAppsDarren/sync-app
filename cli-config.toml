@@ -1,0 +1,23 @@
+{
+  "configs": {
+    "fff070d2-d1e6-4beb-8d92-ce2f1e7a9af2": {
+      "id": "fff070d2-d1e6-4beb-8d92-ce2f1e7a9af2",
+      "name": "Test Sync",
+      "source_path": "test_source",
+      "destination_path": "test_destination",
+      "pocketbase_url": "http://localhost:8090",
+      "admin_email": null,
+      "admin_password": null,
+      "filters": [],
+      "exclude_patterns": [
+        ".git",
+        "node_modules"
+      ],
+      "dry_run": false,
+      "preserve_permissions": true,
+      "created_at": "2025-06-28T10:33:31.045786200Z",
+      "updated_at": "2025-06-28T10:33:31.045786200Z"
+    }
+  },
+  "default_config": null
+}

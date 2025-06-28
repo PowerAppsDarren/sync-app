@@ -1,0 +1,353 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  POCKETBASE_VERSION: "0.20.1"
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux targets
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          
+          # Windows targets
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+            archive: zip
+          
+          # macOS targets
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Cache cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+            ${{ runner.os }}-cargo-
+
+      - name: Build binaries
+        run: |
+          cross build --release --target ${{ matrix.target }} \
+            --bin sync --bin sync-server --bin sync-daemon
+
+      - name: Download PocketBase
+        run: |
+          set -e
+          
+          # Map Rust targets to PocketBase download names
+          case "${{ matrix.target }}" in
+            *linux*)
+              pb_os="linux"
+              pb_ext=""
+              ;;
+            *windows*)
+              pb_os="windows"
+              pb_ext=".exe"
+              ;;
+            *darwin*)
+              pb_os="darwin"
+              pb_ext=""
+              ;;
+            *)
+              echo "Unknown OS for target ${{ matrix.target }}"
+              exit 1
+              ;;
+          esac
+          
+          case "${{ matrix.target }}" in
+            *x86_64*)
+              pb_arch="amd64"
+              ;;
+            *aarch64*)
+              pb_arch="arm64"
+              ;;
+            *)
+              echo "Unknown architecture for target ${{ matrix.target }}"
+              exit 1
+              ;;
+          esac
+          
+          pb_filename="pocketbase_${POCKETBASE_VERSION}_${pb_os}_${pb_arch}.zip"
+          pb_url="https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/${pb_filename}"
+          
+          echo "Downloading PocketBase: $pb_url"
+          curl -L -o "$pb_filename" "$pb_url"
+          unzip -q "$pb_filename"
+          
+          # Copy to target directory
+          cp "pocketbase$pb_ext" "target/${{ matrix.target }}/release/"
+
+      - name: Create archive
+        id: archive
+        run: |
+          set -e
+          
+          version="${{ steps.version.outputs.version }}"
+          target="${{ matrix.target }}"
+          archive_name="sync-app-${version}-${target}"
+          
+          # Create staging directory
+          mkdir -p "staging/${target}"
+          
+          # Copy binaries
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            cp target/${target}/release/sync.exe staging/${target}/
+            cp target/${target}/release/sync-server.exe staging/${target}/
+            cp target/${target}/release/sync-daemon.exe staging/${target}/
+            cp target/${target}/release/pocketbase.exe staging/${target}/
+          else
+            cp target/${target}/release/sync staging/${target}/
+            cp target/${target}/release/sync-server staging/${target}/
+            cp target/${target}/release/sync-daemon staging/${target}/
+            cp target/${target}/release/pocketbase staging/${target}/
+          fi
+          
+          # Copy additional files
+          cp README.md staging/${target}/ 2>/dev/null || echo "No README found"
+          cp LICENSE staging/${target}/ 2>/dev/null || echo "No LICENSE found"
+          
+          # Create archive
+          cd staging
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            zip -r "../${archive_name}.zip" "${target}/"
+            echo "archive=${archive_name}.zip" >> $GITHUB_OUTPUT
+          else
+            tar czf "../${archive_name}.tar.gz" "${target}/"
+            echo "archive=${archive_name}.tar.gz" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.archive.outputs.archive }}
+          path: ${{ steps.archive.outputs.archive }}
+
+  package:
+    name: Create packages
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Organize artifacts
+        run: |
+          mkdir -p target/release-builds
+          find artifacts -name "*.tar.gz" -o -name "*.zip" | while read file; do
+            cp "$file" target/release-builds/
+          done
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev rpm build-essential
+
+      - name: Generate checksums
+        run: |
+          cd target/release-builds
+          sha256sum *.tar.gz *.zip > checksums-${{ steps.version.outputs.version }}.txt
+
+      - name: Build Debian packages
+        run: |
+          cd packaging/debian
+          chmod +x build-deb.sh
+          ./build-deb.sh ${{ steps.version.outputs.version }} amd64
+          ./build-deb.sh ${{ steps.version.outputs.version }} arm64
+
+      - name: Build RPM packages
+        run: |
+          cd packaging/rpm
+          chmod +x build-rpm.sh
+          ./build-rpm.sh ${{ steps.version.outputs.version }} x86_64
+          ./build-rpm.sh ${{ steps.version.outputs.version }} aarch64
+
+      - name: Collect packages
+        run: |
+          mkdir -p release-packages
+          
+          # Copy binary archives
+          cp target/release-builds/*.tar.gz release-packages/
+          cp target/release-builds/*.zip release-packages/
+          cp target/release-builds/checksums-*.txt release-packages/
+          
+          # Copy packages
+          cp packaging/debian/*.deb release-packages/ 2>/dev/null || true
+          cp packaging/rpm/*.rpm release-packages/ 2>/dev/null || true
+          
+          ls -la release-packages/
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-packages-${{ steps.version.outputs.version }}
+          path: release-packages/
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, package]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: release-packages-${{ steps.version.outputs.version }}
+          path: release-packages
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          
+          # Get previous tag
+          previous_tag=$(git tag --sort=-version:refname | head -n 2 | tail -n 1 2>/dev/null || echo "")
+          
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+          
+          if [ -n "$previous_tag" ] && [ "$previous_tag" != "v$version" ]; then
+            echo "### Changes since $previous_tag" >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"- %s" "${previous_tag}..HEAD" >> release_notes.md 2>/dev/null || {
+              echo "- Initial release" >> release_notes.md
+            }
+          else
+            echo "### Initial Release" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "- First release of sync-app" >> release_notes.md
+            echo "- Cross-platform synchronization with PocketBase backend" >> release_notes.md
+            echo "- CLI tool, server component, and daemon service" >> release_notes.md
+            echo "- Support for Linux, macOS, and Windows" >> release_notes.md
+          fi
+          
+          echo "" >> release_notes.md
+          echo "### Downloads" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Choose the appropriate binary for your platform:" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- **Linux x86_64 (MUSL)**: \`sync-app-${version}-x86_64-unknown-linux-musl.tar.gz\`" >> release_notes.md
+          echo "- **Linux ARM64 (MUSL)**: \`sync-app-${version}-aarch64-unknown-linux-musl.tar.gz\`" >> release_notes.md
+          echo "- **Linux x86_64 (GNU)**: \`sync-app-${version}-x86_64-unknown-linux-gnu.tar.gz\`" >> release_notes.md
+          echo "- **Linux ARM64 (GNU)**: \`sync-app-${version}-aarch64-unknown-linux-gnu.tar.gz\`" >> release_notes.md
+          echo "- **Windows x86_64**: \`sync-app-${version}-x86_64-pc-windows-gnu.zip\`" >> release_notes.md
+          echo "- **macOS x86_64**: \`sync-app-${version}-x86_64-apple-darwin.tar.gz\`" >> release_notes.md
+          echo "- **macOS ARM64**: \`sync-app-${version}-aarch64-apple-darwin.tar.gz\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "**Debian/Ubuntu:**" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "wget https://github.com/\${{ github.repository }}/releases/download/v${version}/sync-app_${version}_amd64.deb" >> release_notes.md
+          echo "sudo dpkg -i sync-app_${version}_amd64.deb" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "**RPM-based (RHEL, CentOS, Fedora):**" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "wget https://github.com/\${{ github.repository }}/releases/download/v${version}/sync-app-${version}-1.x86_64.rpm" >> release_notes.md
+          echo "sudo rpm -ivh sync-app-${version}-1.x86_64.rpm" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Verification" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Verify your download using the provided checksums:" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "sha256sum -c checksums-${version}.txt" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            release-packages/*.tar.gz
+            release-packages/*.zip
+            release-packages/*.deb
+            release-packages/*.rpm
+            release-packages/checksums-*.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

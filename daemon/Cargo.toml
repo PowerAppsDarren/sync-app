@@ -1,0 +1,61 @@
+[package]
+name = "sync-daemon"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cross-platform sync daemon service"
+
+[[bin]]
+name = "sync-daemon"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+prometheus = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+
+# Local dependencies
+sync-core = { path = "../sync-core" }
+sync = { path = "../sync" }
+
+# Daemon-specific dependencies
+cron = "0.12"
+notify = "6.1"
+dirs = "5.0"
+sysinfo = "0.30"
+# Note: sysinfo already included above
+tokio-util = "0.7"
+futures = "0.3"
+parking_lot = "0.12"
+toml = "0.8"
+humantime-serde = "1.1"
+rpassword = "7.3"
+url = { workspace = true }
+
+# Platform-specific dependencies
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.6"
+winapi = { version = "0.3", features = ["winuser", "winsvc"] }
+
+[target.'cfg(unix)'.dependencies]
+nix = "0.27"
+daemonize = "0.5"
+
+[features]
+default = []
+service = []

@@ -1,0 +1,36 @@
+[package]
+name = "ui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "TUI dashboard for sync application"
+
+[[bin]]
+name = "ui"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+sync-core = { path = "../sync-core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# TUI dependencies
+ratatui = "0.24"
+crossterm = "0.27"
+
+# WebSocket for real-time updates
+tokio-tungstenite = "0.20"
+url = "2.4"
+
+# Additional utilities
+futures-util = "0.3"
+thiserror = "1.0"

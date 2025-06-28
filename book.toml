@@ -1,0 +1,52 @@
+[book]
+title = "Sync App Documentation"
+description = "Comprehensive documentation for Sync App - High-performance file synchronization with PocketBase backend"
+authors = ["Sync App Team"]
+language = "en"
+multilingual = false
+src = "docs"
+edition = "2021"
+
+[build]
+build-dir = "docs-site"
+create-missing = true
+preprocess = ["links"]
+extra-watch-dirs = ["examples"]
+
+[output.html]
+additional-css = ["theme/custom.css"]
+additional-js = ["theme/custom.js"]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+copy-fonts = true
+mathjax-support = false
+print = { enable = true }
+search = { enable = true, limit-results = 30, teaser-word-count = 30 }
+git-repository-url = "https://github.com/yourusername/sync-app"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/yourusername/sync-app/edit/main/docs/{path}"
+site-url = "https://yourusername.github.io/sync-app/"
+
+[output.html.fold]
+enable = false
+level = 0
+
+[output.html.playground]
+copyable = true
+copy-js = true
+line-numbers = false
+editable = false
+runnable = false
+
+[preprocessor.links]
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3

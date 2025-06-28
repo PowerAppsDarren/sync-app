@@ -6,6 +6,9 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+// API module with PocketBase client
+pub mod api;
+
 /// Configuration for the sync application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncConfig {

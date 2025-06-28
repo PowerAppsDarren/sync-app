@@ -17,9 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("macos", "x86_64") => ("darwin_amd64", ".zip"),
         ("macos", "aarch64") => ("darwin_arm64", ".zip"),
         _ => {
-            println!(
-                "cargo:warning=PocketBase binary not available for {target_os}-{target_arch}"
-            );
+            println!("cargo:warning=PocketBase binary not available for {target_os}-{target_arch}");
             return Ok(());
         }
     };

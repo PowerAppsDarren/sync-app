@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>sync-app</id>
+    <version>0.1.0</version>
+    <packageSourceUrl>https://github.com/yourusername/sync-app/tree/main/packaging/chocolatey</packageSourceUrl>
+    <owners>yourusername</owners>
+    <title>Sync App</title>
+    <authors>Your Name</authors>
+    <projectUrl>https://github.com/yourusername/sync-app</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/yourusername/sync-app/main/assets/icon.png</iconUrl>
+    <copyright>2024 Your Name</copyright>
+    <licenseUrl>https://github.com/yourusername/sync-app/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/yourusername/sync-app</projectSourceUrl>
+    <docsUrl>https://github.com/yourusername/sync-app/wiki</docsUrl>
+    <bugTrackerUrl>https://github.com/yourusername/sync-app/issues</bugTrackerUrl>
+    <tags>sync synchronization pocketbase cli daemon rust cross-platform</tags>
+    <summary>Cross-platform synchronization application with PocketBase backend</summary>
+    <description><![CDATA[
+# Sync App
+
+A modern, cross-platform synchronization application built with Rust and powered by PocketBase.
+
+## Features
+
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **Multiple interfaces**: Command-line tool, server component, and background daemon
+- **PocketBase integration**: Uses PocketBase as the backend database and API
+- **Real-time sync**: Supports real-time synchronization across devices
+- **Secure**: Built with security best practices
+- **Performance**: Written in Rust for optimal performance
+
+## Components
+
+- `sync`: Command-line interface for manual operations
+- `sync-server`: Server component for hosting sync services
+- `sync-daemon`: Background daemon for automatic synchronization
+- `pocketbase`: Bundled PocketBase binary (optional dependency)
+
+## Installation
+
+After installation, you can use the tools from the command line:
+
+```cmd
+sync --help
+sync-server --help
+sync-daemon --help
+```
+
+## Configuration
+
+Configuration files are stored in `%APPDATA%\sync-app\` on Windows.
+
+## Service Installation
+
+To install the sync daemon as a Windows service:
+
+```cmd
+sync-daemon install
+sync-daemon start
+```
+
+To uninstall:
+
+```cmd
+sync-daemon stop
+sync-daemon uninstall
+```
+]]></description>
+    <releaseNotes>https://github.com/yourusername/sync-app/releases/tag/v0.1.0</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
