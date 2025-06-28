@@ -44,6 +44,18 @@ Thumbs.db
 *credential*
 *password*
 
+# Images (to prevent accidental sensitive image commits)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+# Allow specific images if needed
+!docs/images/*
+!assets/*
+
 # Build artifacts
 /dist/
 /build/
