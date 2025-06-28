@@ -35,6 +35,15 @@ Thumbs.db
 /pocketbase/*.db
 /pocketbase/*.db-*
 
+# Configuration files with credentials
+*config*.toml
+!*config*.toml.example
+
+# Sensitive data
+*secret*
+*credential*
+*password*
+
 # Build artifacts
 /dist/
 /build/

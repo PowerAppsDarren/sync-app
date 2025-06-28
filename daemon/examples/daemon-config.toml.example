@@ -4,8 +4,8 @@
 
 [pocketbase]
 url = "http://localhost:8090"
-admin_email = "admin@example.com"
-admin_password = "admin123456"
+admin_email = "YOUR_ADMIN_EMAIL"
+admin_password = "YOUR_ADMIN_PASSWORD"
 timeout_secs = 30
 retry_attempts = 3
 retry_delay_secs = 5
